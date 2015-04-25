@@ -11,9 +11,9 @@ import (
 
 func TestOpen(t *testing.T) {
 	var (
-		err        error
-		insertRate uint = 100
-		dbh        *DB
+		err       error
+		flushRate uint = 100
+		dbh       *DB
 	) //var
 
 	t.Parallel()
@@ -22,7 +22,7 @@ func TestOpen(t *testing.T) {
 		t.Fatal(err)
 	} //if
 
-	if dbh.insertRate != insertRate {
+	if dbh.flushRate != flushRate {
 		t.Fatal("'insertRate' not being set correctly in Open().")
 	} //if
 

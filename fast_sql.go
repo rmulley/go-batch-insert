@@ -10,14 +10,14 @@ type DB struct {
 	driverName string
 	bindParams []interface{}
 	insertCtr  uint
-	insertRate uint
+	flushRate  uint
 	queryPart1 string
 	queryPart2 string
 	values     string
 } //DB
 
 // Open is the same as sql.Open, but returns an *fastsql.DB instead.
-func Open(driverName, dataSourceName string, insertRate uint) (*DB, error) {
+func Open(driverName, dataSourceName string, flushRate uint) (*DB, error) {
 	var (
 		err error
 		dbh *sql.DB
@@ -31,7 +31,7 @@ func Open(driverName, dataSourceName string, insertRate uint) (*DB, error) {
 		DB:         dbh,
 		driverName: driverName,
 		bindParams: make([]interface{}, 0),
-		insertRate: insertRate,
+		flushRate:  flushRate,
 		values:     " VALUES",
 	}, err
 } //Open
@@ -49,7 +49,7 @@ func (this *DB) Insert(query string, params ...interface{}) (err error) {
 	this.bindParams = append(this.bindParams, params...)
 
 	// If the batch interval has been hit, execute a batch insert
-	if this.insertCtr >= this.insertRate {
+	if this.insertCtr >= this.flushRate {
 		err = this.Flush()
 	} //if
 
@@ -89,6 +89,26 @@ func (this *DB) SetDB(dbh *sql.DB) (err error) {
 	this.DB = dbh
 	return nil
 } //SetDB
+
+func (this *DB) Update(query string, params ...interface{}) (err error) {
+	// Only split out query the first time Update is called
+	if this.queryPart1 == "" {
+		this.splitQuery(query)
+	} //if
+
+	this.insertCtr++
+
+	// Build VALUES seciton of query and add to parameter slice
+	this.values += this.queryPart2
+	this.bindParams = append(this.bindParams, params...)
+
+	// If the batch interval has been hit, execute a batch update
+	if this.insertCtr >= this.flushRate {
+		err = this.Flush()
+	} //if
+
+	return err
+} //Update
 
 func (this *DB) splitQuery(query string) {
 	var (
