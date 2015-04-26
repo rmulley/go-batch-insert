@@ -31,6 +31,80 @@ func TestOpen(t *testing.T) {
 	} //if
 } //TestOpen
 
+func TestFlushUpdates(t *testing.T) {
+	var (
+		err     error
+		query   string
+		dbh     *DB
+		dbhMock *sql.DB
+	) //var
+
+	t.Parallel()
+
+	if dbh, err = Open("mysql", "user:pass@tcp(localhost:3306)/db_name?"+url.QueryEscape("charset=utf8mb4,utf8&loc=America/New_York"), 100); err != nil {
+		t.Fatal(err)
+	} //if
+	defer dbh.Close()
+
+	if dbhMock, err = sqlmock.New(); err != nil {
+		t.Fatal(err)
+	} //if
+	defer dbhMock.Close()
+
+	dbh.setDB(dbhMock)
+
+	query = "UPDATE table_name SET field1 = ?, field2 = ? WHERE field3 = ?;"
+
+	for i := 0; i < 3; i++ {
+		if err = dbh.BatchUpdate(
+			query,
+			[]interface{}{
+				1,
+				2,
+				3,
+			}...,
+		); err != nil {
+			t.Fatal(err)
+		} //if
+	} //for
+
+	/*
+	   UPDATE mytable
+	   SET
+	     mytext = myvalues.mytext,
+	     myint = myvalues.myint
+	   FROM (
+	     VALUES
+	       (1, 'textA', 99),
+	       (2, 'textB', 88),
+	       ...
+	   ) AS myvalues (mykey, mytext, myint)
+	   WHERE mytable.mykey = myvalues.mykey
+	*/
+
+	sqlmock.ExpectExec("update table_name set field1 = myVals.field1, myVals.field2 FROM \\(VALUES\\(\\?, \\?, \\?\\),\\(\\?, \\?, \\?\\),\\(\\?, \\?, \\?\\)\\) as myvals(key, field1, field2) where field3 = myvalues.key;").
+		WithArgs(1, 2, 3, 1, 2, 3, 1, 2, 3).
+		WillReturnResult(sqlmock.NewResult(0, 3))
+
+	if err = dbh.flushInserts(); err != nil {
+		t.Fatal(err)
+	} //if
+
+	/*
+		if dbh.insert.values != " VALUES" {
+			t.Fatal("dbh.values not properly reset by dbh.Flush().")
+		} //if
+
+		if len(dbh.insert.bindParams) > 0 {
+			t.Fatal("dbh.bindParams not properly reset by dbh.Flush().")
+		} //if
+
+		if dbh.insert.ctr != 0 {
+			t.Fatal("dbh.insertCtr not properly reset by dbh.Flush().")
+		} //if
+	*/
+} //TestFlushUPdates
+
 func TestFlushInserts(t *testing.T) {
 	var (
 		err     error
@@ -51,7 +125,7 @@ func TestFlushInserts(t *testing.T) {
 	} //if
 	defer dbhMock.Close()
 
-	dbh.SetDB(dbhMock)
+	dbh.setDB(dbhMock)
 
 	query = "INSERT INTO table_name(a, b, c) VALUES(?, ?, ?);"
 
@@ -108,7 +182,7 @@ func TestBatchInsert(t *testing.T) {
 	} //if
 	defer dbhMock.Close()
 
-	dbh.SetDB(dbhMock)
+	dbh.setDB(dbhMock)
 
 	query = "INSERT INTO table_name(a, b, c) VALUES(?, ?, ?);"
 
@@ -159,7 +233,7 @@ func (this *DB) TestSetDB(t *testing.T) {
 	} //if
 	defer dbhMock.Close()
 
-	if err = dbh.SetDB(dbhMock); err != nil {
+	if err = dbh.setDB(dbhMock); err != nil {
 		t.Fatal(err)
 	} //if
 } //TestSetDB
@@ -183,7 +257,7 @@ func TestSplitQuery(t *testing.T) {
 	} //if
 	defer dbhMock.Close()
 
-	dbh.SetDB(dbhMock)
+	dbh.setDB(dbhMock)
 
 	query = "INSERT INTO table_name(a, b, c) VALUES(?, ?, ?);"
 
