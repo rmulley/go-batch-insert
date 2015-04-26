@@ -26,7 +26,7 @@ func TestOpen(t *testing.T) {
 		t.Fatal("'insertRate' not being set correctly in Open().")
 	} //if
 
-	if dbh.inserter.values != " VALUES" {
+	if dbh.insert.values != " VALUES" {
 		t.Fatal("'values' not being set correctly in Open().")
 	} //if
 } //TestOpen
@@ -76,15 +76,15 @@ func TestFlushInserts(t *testing.T) {
 		t.Fatal(err)
 	} //if
 
-	if dbh.inserter.values != " VALUES" {
+	if dbh.insert.values != " VALUES" {
 		t.Fatal("dbh.values not properly reset by dbh.Flush().")
 	} //if
 
-	if len(dbh.inserter.bindParams) > 0 {
+	if len(dbh.insert.bindParams) > 0 {
 		t.Fatal("dbh.bindParams not properly reset by dbh.Flush().")
 	} //if
 
-	if dbh.inserter.ctr != 0 {
+	if dbh.insert.ctr != 0 {
 		t.Fatal("dbh.insertCtr not properly reset by dbh.Flush().")
 	} //if
 } //TestFlushInserts
@@ -125,19 +125,19 @@ func TestBatchInsert(t *testing.T) {
 		} //if
 	} //for
 
-	if len(dbh.inserter.bindParams) != 9 {
-		t.Log(dbh.inserter.bindParams)
-		t.Fatal("dbh.inserter.bindParams not properly set by dbh.BatchInsert().")
+	if len(dbh.insert.bindParams) != 9 {
+		t.Log(dbh.insert.bindParams)
+		t.Fatal("dbh.insert.bindParams not properly set by dbh.BatchInsert().")
 	} //if
 
-	if dbh.inserter.ctr != 3 {
-		t.Log(dbh.inserter.ctr)
-		t.Fatal("dbh.inserter.ctr not properly being set by dbh.BatchInsert().")
+	if dbh.insert.ctr != 3 {
+		t.Log(dbh.insert.ctr)
+		t.Fatal("dbh.insert.ctr not properly being set by dbh.BatchInsert().")
 	} //if
 
-	if dbh.inserter.values != " VALUES(?, ?, ?),(?, ?, ?),(?, ?, ?)," {
-		t.Log(dbh.inserter.values)
-		t.Fatal("dbh.inserter.values not properly being set by dbh.BatchInsert().")
+	if dbh.insert.values != " VALUES(?, ?, ?),(?, ?, ?),(?, ?, ?)," {
+		t.Log(dbh.insert.values)
+		t.Fatal("dbh.insert.values not properly being set by dbh.BatchInsert().")
 	} //if
 } //TestBatchInsert
 
@@ -198,13 +198,13 @@ func TestSplitQuery(t *testing.T) {
 		t.Fatal(err)
 	} //if
 
-	if dbh.inserter.queryPart1 != "insert into table_name(a, b, c)" {
-		t.Log("*" + dbh.inserter.queryPart1 + "*")
-		t.Fatal("dbh.inserter.queryPart1 not formatted correctly.")
+	if dbh.insert.queryPart1 != "insert into table_name(a, b, c)" {
+		t.Log("*" + dbh.insert.queryPart1 + "*")
+		t.Fatal("dbh.insert.queryPart1 not formatted correctly.")
 	} //if
 
-	if dbh.inserter.queryPart2 != "(?, ?, ?)," {
-		t.Log("*" + dbh.inserter.queryPart2 + "*")
-		t.Fatal("dbh.inserter.queryPart2 not formatted correctly.")
+	if dbh.insert.queryPart2 != "(?, ?, ?)," {
+		t.Log("*" + dbh.insert.queryPart2 + "*")
+		t.Fatal("dbh.insert.queryPart2 not formatted correctly.")
 	} //if
 } //TestSplitQuery
