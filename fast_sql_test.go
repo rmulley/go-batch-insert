@@ -26,12 +26,12 @@ func TestOpen(t *testing.T) {
 		t.Fatal("'insertRate' not being set correctly in Open().")
 	} //if
 
-	if dbh.values != " VALUES" {
+	if dbh.inserter.values != " VALUES" {
 		t.Fatal("'values' not being set correctly in Open().")
 	} //if
 } //TestOpen
 
-func TestFlush(t *testing.T) {
+func TestFlushInserts(t *testing.T) {
 	var (
 		err     error
 		query   string
@@ -56,7 +56,7 @@ func TestFlush(t *testing.T) {
 	query = "INSERT INTO table_name(a, b, c) VALUES(?, ?, ?);"
 
 	for i := 0; i < 3; i++ {
-		if err = dbh.Insert(
+		if err = dbh.BatchInsert(
 			query,
 			[]interface{}{
 				1,
@@ -72,24 +72,24 @@ func TestFlush(t *testing.T) {
 		WithArgs(1, 2, 3, 1, 2, 3, 1, 2, 3).
 		WillReturnResult(sqlmock.NewResult(0, 3))
 
-	if err = dbh.Flush(); err != nil {
+	if err = dbh.flushInserts(); err != nil {
 		t.Fatal(err)
 	} //if
 
-	if dbh.values != " VALUES" {
+	if dbh.inserter.values != " VALUES" {
 		t.Fatal("dbh.values not properly reset by dbh.Flush().")
 	} //if
 
-	if len(dbh.bindParams) > 0 {
+	if len(dbh.inserter.bindParams) > 0 {
 		t.Fatal("dbh.bindParams not properly reset by dbh.Flush().")
 	} //if
 
-	if dbh.insertCtr != 0 {
+	if dbh.inserter.ctr != 0 {
 		t.Fatal("dbh.insertCtr not properly reset by dbh.Flush().")
 	} //if
-} //TestFlush
+} //TestFlushInserts
 
-func TestInsert(t *testing.T) {
+func TestBatchInsert(t *testing.T) {
 	var (
 		err     error
 		query   string
@@ -113,7 +113,7 @@ func TestInsert(t *testing.T) {
 	query = "INSERT INTO table_name(a, b, c) VALUES(?, ?, ?);"
 
 	for i := 0; i < 3; i++ {
-		if err = dbh.Insert(
+		if err = dbh.BatchInsert(
 			query,
 			[]interface{}{
 				1,
@@ -125,21 +125,21 @@ func TestInsert(t *testing.T) {
 		} //if
 	} //for
 
-	if len(dbh.bindParams) != 9 {
-		t.Log(dbh.bindParams)
-		t.Fatal("dbh.bindParams not properly set by dbh.Insert().")
+	if len(dbh.inserter.bindParams) != 9 {
+		t.Log(dbh.inserter.bindParams)
+		t.Fatal("dbh.inserter.bindParams not properly set by dbh.BatchInsert().")
 	} //if
 
-	if dbh.insertCtr != 3 {
-		t.Log(dbh.insertCtr)
-		t.Fatal("dbh.insertCtr not properly being set by dbh.Insert().")
+	if dbh.inserter.ctr != 3 {
+		t.Log(dbh.inserter.ctr)
+		t.Fatal("dbh.inserter.ctr not properly being set by dbh.BatchInsert().")
 	} //if
 
-	if dbh.values != " VALUES(?, ?, ?),(?, ?, ?),(?, ?, ?)," {
-		t.Log(dbh.values)
-		t.Fatal("dbh.values not properly being set by dbh.Insert().")
+	if dbh.inserter.values != " VALUES(?, ?, ?),(?, ?, ?),(?, ?, ?)," {
+		t.Log(dbh.inserter.values)
+		t.Fatal("dbh.inserter.values not properly being set by dbh.BatchInsert().")
 	} //if
-} //TestInsert
+} //TestBatchInsert
 
 func (this *DB) TestSetDB(t *testing.T) {
 	var (
@@ -187,7 +187,7 @@ func TestSplitQuery(t *testing.T) {
 
 	query = "INSERT INTO table_name(a, b, c) VALUES(?, ?, ?);"
 
-	if err = dbh.Insert(
+	if err = dbh.BatchInsert(
 		query,
 		[]interface{}{
 			1,
@@ -198,13 +198,13 @@ func TestSplitQuery(t *testing.T) {
 		t.Fatal(err)
 	} //if
 
-	if dbh.queryPart1 != "insert into table_name(a, b, c)" {
-		t.Log("*" + dbh.queryPart1 + "*")
-		t.Fatal("dbh.queryPart1 not formatted correctly.")
+	if dbh.inserter.queryPart1 != "insert into table_name(a, b, c)" {
+		t.Log("*" + dbh.inserter.queryPart1 + "*")
+		t.Fatal("dbh.inserter.queryPart1 not formatted correctly.")
 	} //if
 
-	if dbh.queryPart2 != "(?, ?, ?)," {
-		t.Log("*" + dbh.queryPart2 + "*")
-		t.Fatal("dbh.queryPart2 not formatted correctly.")
+	if dbh.inserter.queryPart2 != "(?, ?, ?)," {
+		t.Log("*" + dbh.inserter.queryPart2 + "*")
+		t.Fatal("dbh.inserter.queryPart2 not formatted correctly.")
 	} //if
 } //TestSplitQuery

@@ -2,19 +2,55 @@ package fastsql
 
 import (
 	"database/sql"
+	"errors"
+	"runtime"
 	"strings"
 ) //import
 
 type DB struct {
 	*sql.DB
 	driverName string
-	bindParams []interface{}
-	insertCtr  uint
 	flushRate  uint
+	inserter   *Inserter
+} //DB
+
+type Inserter struct {
+	bindParams []interface{}
+	ctr        uint
 	queryPart1 string
 	queryPart2 string
 	values     string
-} //DB
+} //Inserter
+
+type queryConverter interface {
+	split() error
+} //queryConverter
+
+func (this *Inserter) split(query string) error {
+	var (
+		err                  error
+		ndxParens, ndxValues int
+	) //var
+
+	// Catch runtime errors
+	// Use a ptr so that the error is returned from the split func
+	defer func(err *error) {
+		if rec := recover(); rec != nil {
+			*err = errors.New(rec.(*runtime.TypeAssertionError).Error())
+		} //if
+	}(&err) //func
+
+	// Normalize and split query
+	query = strings.ToLower(query)
+	ndxValues = strings.LastIndex(query, "values")
+	ndxParens = strings.LastIndex(query, ")")
+
+	// Save the first and second parts of the query separately for easier building later
+	this.queryPart1 = strings.TrimSpace(query[:ndxValues])
+	this.queryPart2 = query[ndxValues+6:ndxParens+1] + ","
+
+	return err
+} //splitQuery
 
 // Open is the same as sql.Open, but returns an *fastsql.DB instead.
 func Open(driverName, dataSourceName string, flushRate uint) (*DB, error) {
@@ -30,56 +66,70 @@ func Open(driverName, dataSourceName string, flushRate uint) (*DB, error) {
 	return &DB{
 		DB:         dbh,
 		driverName: driverName,
-		bindParams: make([]interface{}, 0),
 		flushRate:  flushRate,
-		values:     " VALUES",
+		inserter: &Inserter{
+			bindParams: make([]interface{}, 0),
+			values:     " VALUES",
+		},
 	}, err
 } //Open
 
-func (this *DB) Insert(query string, params ...interface{}) (err error) {
-	// Only split out query the first time Insert is called
-	if this.queryPart1 == "" {
-		this.splitQuery(query)
+// Close is the same as sql.Open, but Flush's all INSERTs and UPDATEs first.
+func (this *DB) Close() error {
+	var (
+		err error
+	) //var
+
+	if err = this.flushInserts(); err != nil {
+		return err
 	} //if
 
-	this.insertCtr++
+	return this.DB.Close()
+} //Close
+
+func (this *DB) BatchInsert(query string, params ...interface{}) (err error) {
+	// Only split out query the first time Insert is called
+	if this.inserter.queryPart1 == "" {
+		this.inserter.split(query)
+	} //if
+
+	this.inserter.ctr++
 
 	// Build VALUES seciton of query and add to parameter slice
-	this.values += this.queryPart2
-	this.bindParams = append(this.bindParams, params...)
+	this.inserter.values += this.inserter.queryPart2
+	this.inserter.bindParams = append(this.inserter.bindParams, params...)
 
 	// If the batch interval has been hit, execute a batch insert
-	if this.insertCtr >= this.flushRate {
-		err = this.Flush()
+	if this.inserter.ctr >= this.flushRate {
+		err = this.flushInserts()
 	} //if
 
 	return err
-} //Insert
+} //BatchInsert
 
-func (this *DB) Flush() (err error) {
+func (this *DB) flushInserts() error {
 	var (
+		err  error
 		stmt *sql.Stmt
 	) //var
 
-	// Prepare query
-	if stmt, err = this.DB.Prepare(this.queryPart1 + this.values[:len(this.values)-1]); err != nil {
+	if stmt, err = this.DB.Prepare(this.inserter.queryPart1 + this.inserter.values[:len(this.inserter.values)-1]); err != nil {
 		return (err)
 	} //if
 	defer stmt.Close()
 
-	// Executate batch insert
-	if _, err = stmt.Exec(this.bindParams...); err != nil {
+	if _, err = stmt.Exec(this.inserter.bindParams...); err != nil {
 		return (err)
 	} //if
 
 	// Reset vars
 	_ = stmt.Close()
-	this.values = " VALUES"
-	this.bindParams = make([]interface{}, 0)
-	this.insertCtr = 0
+	this.inserter.values = " VALUES"
+	this.inserter.bindParams = make([]interface{}, 0)
+	this.inserter.ctr = 0
 
 	return err
-} //Flush
+} //flushInserts
 
 func (this *DB) SetDB(dbh *sql.DB) (err error) {
 	if err = dbh.Ping(); err != nil {
@@ -90,37 +140,24 @@ func (this *DB) SetDB(dbh *sql.DB) (err error) {
 	return nil
 } //SetDB
 
+/*
 func (this *DB) Update(query string, params ...interface{}) (err error) {
 	// Only split out query the first time Update is called
-	if this.queryPart1 == "" {
+	if this.updateQueryPart1 == "" {
 		this.splitQuery(query)
 	} //if
 
-	this.insertCtr++
+	this.updateCtr++
 
 	// Build VALUES seciton of query and add to parameter slice
-	this.values += this.queryPart2
+	this.values += this.updateQueryPart2
 	this.bindParams = append(this.bindParams, params...)
 
 	// If the batch interval has been hit, execute a batch update
-	if this.insertCtr >= this.flushRate {
-		err = this.Flush()
+	if this.updateCtr >= this.flushRate {
+		err = Flusher(this).Flush()
 	} //if
 
 	return err
 } //Update
-
-func (this *DB) splitQuery(query string) {
-	var (
-		ndxParens, ndxValues int
-	) //var
-
-	// Normalize and split query
-	query = strings.ToLower(query)
-	ndxValues = strings.LastIndex(query, "values")
-	ndxParens = strings.LastIndex(query, ")")
-
-	// Save the first and second parts of the query separately for easier building later
-	this.queryPart1 = strings.TrimSpace(query[:ndxValues])
-	this.queryPart2 = query[ndxValues+6:ndxParens+1] + ","
-} //splitQuery
+*/
