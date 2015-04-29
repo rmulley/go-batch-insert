@@ -238,7 +238,7 @@ func (this *DB) TestSetDB(t *testing.T) {
 	} //if
 } //TestSetDB
 
-func TestSplitQuery(t *testing.T) {
+func TestParseQuery(t *testing.T) {
 	var (
 		err     error
 		query   string
@@ -281,4 +281,54 @@ func TestSplitQuery(t *testing.T) {
 		t.Log("*" + dbh.insert.queryPart2 + "*")
 		t.Fatal("dbh.insert.queryPart2 not formatted correctly.")
 	} //if
-} //TestSplitQuery
+} //TestParseQuery
+
+func TestParseQuery2(t *testing.T) {
+	var (
+		err     error
+		query   string
+		dbh     *DB
+		dbhMock *sql.DB
+	) //var
+
+	t.Parallel()
+
+	if dbh, err = Open("mysql", "user:pass@tcp(localhost:3306)/db_name?"+url.QueryEscape("charset=utf8mb4,utf8&loc=America/New_York"), 100); err != nil {
+		t.Fatal(err)
+	} //if
+
+	if dbhMock, err = sqlmock.New(); err != nil {
+		t.Fatal(err)
+	} //if
+	defer dbhMock.Close()
+
+	dbh.setDB(dbhMock)
+
+	query = "UPDATE table_name SET field1 = ?, field2 = ? WHERE field3 = ?;"
+
+	if err = dbh.BatchUpdate(
+		query,
+		[]interface{}{
+			1,
+			2,
+			3,
+		}...,
+	); err != nil {
+		t.Fatal(err)
+	} //if
+
+	if dbh.update.queryPart1 != "update table_name" {
+		t.Log("*" + dbh.update.queryPart1 + "*")
+		t.Fatal("dbh.update.queryPart1 not formatted correctly.")
+	} //if
+
+	if dbh.update.queryPart2 != "set field1 = myVals.field1, field2 = myVals.field2" {
+		t.Log("*" + dbh.update.queryPart2 + "*")
+		t.Fatal("dbh.update.queryPart2 not formatted correctly.")
+	} //if
+
+	if dbh.update.queryPart3 != "(?, ?, ?)," {
+		t.Log("*" + dbh.update.queryPart3 + "*")
+		t.Fatal("dbh.update.queryPart3 not formatted correctly.")
+	} //if
+} //TestParseQuery2

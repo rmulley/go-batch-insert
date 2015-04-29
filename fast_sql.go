@@ -3,6 +3,8 @@ package fastsql
 import (
 	"database/sql"
 	"errors"
+	//"log"
+	"regexp"
 	"runtime"
 	"strings"
 ) //import
@@ -34,7 +36,7 @@ type Update struct {
 	values     string
 } //Update
 
-func (this *Insert) split(query string) error {
+func (this *Insert) parseQuery(query string) error {
 	var (
 		err                  error
 		ndxParens, ndxValues int
@@ -58,12 +60,13 @@ func (this *Insert) split(query string) error {
 	this.queryPart2 = query[ndxValues+6:ndxParens+1] + ","
 
 	return err
-} //split
+} //parseQuery
 
-func (this *Update) split(query string) error {
+func (this *Update) parseQuery2(query string) error {
 	var (
 		err              error
 		ndxSet, ndxWhere int
+		re               *regexp.Regexp
 	) //var
 
 	// Catch runtime errors
@@ -75,19 +78,21 @@ func (this *Update) split(query string) error {
 	}(&err) //func
 
 	// Normalize and split query
-	// UPDATE table SET blah= blah, blah = blah WHERE
 	query = strings.ToLower(query)
 	ndxSet = strings.LastIndex(query, " set ")
 	ndxWhere = strings.LastIndex(query, "where")
-	//ndxParens = strings.LastIndex(query, ")")
 
 	// Save the first and second parts of the query separately for easier building later
 	this.queryPart1 = strings.TrimSpace(query[:ndxSet])
 	this.queryPart2 = strings.TrimSpace(query[ndxSet:ndxWhere])
 	this.queryPart3 = strings.TrimSpace(query[ndxWhere:])
 
+	// Reformat SET section of query
+	re = regexp.MustCompile("(\\w+)\\s*=\\s*\\?")
+	this.queryPart2 = re.ReplaceAllString(this.queryPart2, "$1 = myVals.$1")
+
 	return err
-} //split
+} //parseQuery
 
 // Open is the same as sql.Open, but returns an *fastsql.DB instead.
 func Open(driverName, dataSourceName string, flushRate uint) (*DB, error) {
@@ -131,7 +136,7 @@ func (this *DB) Close() (err error) {
 func (this *DB) BatchInsert(query string, params ...interface{}) (err error) {
 	// Only split out query the first time function is called
 	if this.insert.queryPart1 == "" {
-		this.insert.split(query)
+		this.insert.parseQuery(query)
 	} //if
 
 	this.insert.ctr++
@@ -151,7 +156,7 @@ func (this *DB) BatchInsert(query string, params ...interface{}) (err error) {
 func (this *DB) BatchUpdate(query string, params ...interface{}) (err error) {
 	// Only split out query the first time function is called
 	if this.update.queryPart1 == "" {
-		this.update.split(query)
+		this.update.parseQuery2(query)
 	} //if
 
 	this.update.ctr++
