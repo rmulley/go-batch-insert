@@ -18,17 +18,19 @@ type DB struct {
 type Insert struct {
 	bindParams []interface{}
 	ctr        uint
-	queryPart1 string
-	queryPart2 string
-	values     string
+	queryPart1 string // INSERT INTO table_name(field1, field2)
+	queryPart2 string // (?, ?),
+	values     string // VALUES(?, ?), (?, ?)
 } //Insert
 
 type Update struct {
 	bindParams []interface{}
 	ctr        uint
-	queryPart1 string
-	queryPart2 string
-	queryPart3 string
+	queryPart1 string // UPDATE table_name
+	queryPart2 string // SET field1 = myVals.field1, field2 = myVals.field2
+	queryPart3 string // FROM( VALUES(1, val1, val2), (2, val3, val4))
+	queryPart4 string // AS myVals(key, field1, field2)
+	queryPart5 string // WHERE table_name.key = myVals.key
 	values     string
 } //Update
 
