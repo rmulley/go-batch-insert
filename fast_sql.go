@@ -85,7 +85,7 @@ func (this *Update) parseQuery2(query string) error {
 	// Save the first and second parts of the query separately for easier building later
 	this.queryPart1 = strings.TrimSpace(query[:ndxSet])
 	this.queryPart2 = strings.TrimSpace(query[ndxSet:ndxWhere])
-	this.queryPart3 = strings.TrimSpace(query[ndxWhere:])
+	this.queryPart5 = strings.TrimSpace(query[ndxWhere:])
 
 	// Reformat SET section of query
 	re = regexp.MustCompile("(\\w+)\\s*=\\s*\\?")

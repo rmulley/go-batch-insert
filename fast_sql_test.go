@@ -306,6 +306,7 @@ func TestParseQuery2(t *testing.T) {
 
 	query = "UPDATE table_name SET field1 = ?, field2 = ? WHERE field3 = ?;"
 
+	// TODO - Shouldn't need to call BatchUpdate to run splitQuery test
 	if err = dbh.BatchUpdate(
 		query,
 		[]interface{}{
@@ -330,5 +331,15 @@ func TestParseQuery2(t *testing.T) {
 	if dbh.update.queryPart3 != "(?, ?, ?)," {
 		t.Log("*" + dbh.update.queryPart3 + "*")
 		t.Fatal("dbh.update.queryPart3 not formatted correctly.")
+	} //if
+
+	if dbh.update.queryPart4 != "(?, ?, ?)," {
+		t.Log("*" + dbh.update.queryPart4 + "*")
+		t.Fatal("dbh.update.queryPart4 not formatted correctly.")
+	} //if
+
+	if dbh.update.queryPart5 != "where field3 = ?;" {
+		t.Log("*" + dbh.update.queryPart5 + "*")
+		t.Fatal("dbh.update.queryPart5 not formatted correctly.")
 	} //if
 } //TestParseQuery2
