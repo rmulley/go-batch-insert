@@ -11,6 +11,7 @@ package fastsql
 
 import (
 	"database/sql"
+	"regexp"
 	"strings"
 	"sync"
 )
@@ -26,6 +27,9 @@ type DB struct {
 	flushInterval      uint
 	batchInserts       map[string]*insert
 }
+
+var valuesRegexp = regexp.MustCompile(`(?i)values`)
+var dupeRegexp = regexp.MustCompile(`(?i)on duplicate key update`)
 
 // Close is the same a sql.Close, but first closes any opened prepared statements.
 func (d *DB) Close() error {
@@ -173,10 +177,10 @@ func (in *insert) splitQuery(query string) {
 		ndxParens, ndxValues, ndxOnDupe int
 	)
 
-	// Normalize and split query
-	query = strings.ToLower(query)
-	ndxValues = strings.Index(query, "values")
-	ndxOnDupe = strings.LastIndex(query, "on duplicate key update")
+	// Split query
+	ndxValues = valuesRegexp.FindStringIndex(query)[0]
+	dupeMatches := dupeRegexp.FindAllStringIndex(query, -1)
+	ndxOnDupe = dupeMatches[len(dupeMatches)-1][0]
 	ndxParens = strings.LastIndex(query, ")")
 
 	// Split out first part of query
