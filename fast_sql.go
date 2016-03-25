@@ -178,9 +178,18 @@ func (in *insert) splitQuery(query string) {
 	)
 
 	// Split query
-	ndxValues = valuesRegexp.FindStringIndex(query)[0]
+	valuesMatches := valuesRegexp.FindStringIndex(query)
+	if len(valuesMatches) == 0 {
+		ndxValues = -1
+	} else {
+		ndxValues = valuesMatches[0]
+	}
 	dupeMatches := dupeRegexp.FindAllStringIndex(query, -1)
-	ndxOnDupe = dupeMatches[len(dupeMatches)-1][0]
+	if len(dupeMatches) == 0 {
+		ndxOnDupe = -1
+	} else {
+		ndxOnDupe = dupeMatches[len(dupeMatches)-1][0]
+	}
 	ndxParens = strings.LastIndex(query, ")")
 
 	// Split out first part of query
