@@ -33,6 +33,21 @@ var _ = Describe("fastsql", func() {
 		})
 	}) // Describe #Close
 
+	Describe(".newInsert", func() {
+		var in *insert
+
+		BeforeEach(func() {
+			in = newInsert()
+		})
+
+		Context("", func() {
+			It("", func() {
+				Expect(len(in.bindParams)).To(BeZero())
+				Expect(in.values).To(Equal(" VALUES"))
+			})
+		})
+	}) // Describe .newInsert
+
 	Describe("#Open", func() {
 		const flushInterval uint = 100
 		var (
@@ -322,20 +337,5 @@ func TestBatchInsertOnDuplicateKeyUpdate(t *testing.T) {
 
 	if dbh.batchInserts[query].queryPart3 != "ON DUPLICATE KEY UPDATE c = ?;" {
 		t.Fatalf("queryPart3 set incorrectly as '%s'.", dbh.batchInserts[query].queryPart3)
-	}
-}
-
-func TestNewInsert(t *testing.T) {
-	in := newInsert()
-
-	if len(in.bindParams) != 0 {
-		t.Fatalf("Expected insert.bindParams to be empty, has a length of %d instead", len(in.bindParams))
-	}
-
-	// This will panic if bindParams was not made, which it should be
-	in.bindParams = append(in.bindParams, 1, 2, 3)
-
-	if in.values != " VALUES" {
-		t.Fatalf("Expected insert.values to be set to %s, set to %s instead.", " VALUES", in.values)
 	}
 }
