@@ -114,6 +114,9 @@ func (d *DB) BatchInsert(query string, params ...interface{}) (err error) {
 // FlushAll iterates over all batch inserts and inserts them into the database.
 func (d *DB) FlushAll() error {
 	for _, in := range d.batchInserts {
+		if in.insertCtr <= 0 {
+			continue
+		}
 		if err := d.flushInsert(in); err != nil {
 			return err
 		}
