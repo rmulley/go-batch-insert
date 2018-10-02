@@ -13,7 +13,7 @@ Additional functionality inclues:
   2. Automatic creation and re-use of prepared statements.
   3. A convenient holder for manually used prepared statements.
 
-##Example usage
+## Example usage
 
 ```go
 package main
